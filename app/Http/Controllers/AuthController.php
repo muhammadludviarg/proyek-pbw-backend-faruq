@@ -1,37 +1,29 @@
+// app/Http/Controllers/AuthController.php
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Http\Request;
 
-use Illuminate\Support\Facades\Auth; 
- 
-class AuthController extends Controller 
-{ 
-    // Login method to authenticate users 
-    public function login(Request $request) 
-    { 
-        $credentials = $request->validate([ 
-            'email' => 'required|email', 
-            'password' => 'required', 
-        ]); 
- 
-        if (!Auth::attempt($credentials)) { 
-            return response()->json(['message' => 'Login gagal'], 401); 
-        } 
- 
-        /** @var \App\Models\User $user */ 
-        $user = Auth::user(); 
-        $token = $user->createToken('api-token')->plainTextToken; 
- 
-        return response()->json([ 
-            'user' => $user, 
-            'token' => $token, 
-        ]); 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class AuthController extends Controller
+{
+    public function login(Request $request)
+    {
+        // ... (kode login)
     }
-    
+
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete(); 
-        return response()->json(['message'=>'logout success']); 
+        /** @var \App\Models\User $user */
+        $user = Auth::user(); // Dapatkan user yang sedang login
+        if ($user) {
+            // Menghapus token saat ini atau semua token user
+            // Modul Anda hanya menggunakan currentAccessToken()->delete();
+            $request->user()->currentAccessToken()->delete(); 
+            // Atau untuk menghapus semua token: $user->tokens()->delete();
+        }
+
+        return response()->json(['message' => 'Logout berhasil!'], 200); // Pastikan status 200 OK
     }
-} 
+}
