@@ -1,13 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Http\Request;
 
+use Illuminate\Http\Request; 
 use Illuminate\Support\Facades\Auth; 
- 
-class AuthController extends Controller 
-{ 
-    // Login method to authenticate users 
+class AuthController extends Controller
+{
+     // Login method to authenticate users 
     public function login(Request $request) 
     { 
         $credentials = $request->validate([ 
@@ -27,11 +26,12 @@ class AuthController extends Controller
             'user' => $user, 
             'token' => $token, 
         ]); 
-    }
-    
+    } 
+
+    // Logout method to revoke the user's token
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete(); 
-        return response()->json(['message'=>'logout success']); 
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logout berhasil'], 200); 
     }
 }
