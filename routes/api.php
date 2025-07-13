@@ -3,31 +3,43 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublikasiController;
-use App\Http\Controllers\AuthController; 
+use App\Http\Controllers\AuthController;
 
-Route::post('/login', [AuthController::class, 'login']);
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+// Rute yang tidak memerlukan autentikasi Sanctum, atau menggunakan middleware 'web'
+// Untuk SPA, Sanctum membutuhkan rute /sanctum/csrf-cookie untuk diakses tanpa middleware 'api' prefix,
+// dan login/logout seringkali juga diletakkan di luar middleware 'api' group atau menggunakan 'web' group
+// agar cookie dan sesi berfungsi dengan baik.
 
-Route::middleware('auth:sanctum')->group(function () { //Bisa digunkan jika sudah login
-    // Publikasi
-    Route::get('/publikasi', [PublikasiController::class, 'index']);
-    Route::post('/publikasi', [PublikasiController::class, 'store']);
-    Route::get('/publikasi/{id}', [PublikasiController::class, 'show']);
-    Route::patch('/publikasi/{id}', [PublikasiController::class, 'update']);
-    Route::put('/publikasi/{id}', [PublikasiController::class, 'change']);
-    Route::delete('/publikasi/{id}', [PublikasiController::class, 'destroy']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::group(['middleware' => ['web']], function () {
+    // Rute Sanctum untuk mendapatkan CSRF token
+    // Ini biasanya otomatis dibuat oleh Sanctum, tetapi pastikan ia dapat diakses.
+    // Tidak perlu ditambahkan secara eksplisit di sini jika Sanctum sudah mengurusnya.
+    // Endpoint /sanctum/csrf-cookie tidak punya prefix /api secara default.
+
+    Route::post('/login', [AuthController::class, 'login']); // Rute login
+    Route::post('/logout', [AuthController::class, 'logout']); // Rute logout (kadang juga diletakkan di luar auth:sanctum)
 });
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+
+// Rute yang memerlukan autentikasi dengan Sanctum token
+Route::middleware('auth:sanctum')->group(function () {
+    // Rute untuk mendapatkan data user yang sedang login
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    // Rute untuk Publikasi
+    Route::get('/publikasi', [PublikasiController::class, 'index']); // GET semua publikasi
+    Route::post('/publikasi', [Publikasi::class, 'store']); // POST publikasi baru
+
+    // Rute untuk operasi pada satu publikasi berdasarkan ID
+    Route::get('/publikasi/{publikasi}', [PublikasiController::class, 'show']); // GET detail publikasi
+    Route::put('/publikasi/{publikasi}', [PublikasiController::class, 'update']); // UPDATE publikasi (gunakan PUT)
+    Route::patch('/publikasi/{publikasi}', [PublikasiController::class, 'update']); // PATCH publikasi (opsional, juga update)
+    Route::delete('/publikasi/{publikasi}', [PublikasiController::class, 'destroy']); // DELETE publikasi
+
+    // Rute logout juga bisa diletakkan di sini jika Anda lebih suka,
+    // tetapi seringkali lebih baik di grup 'web' seperti di atas untuk SPA.
+    // Jika di sini, maka logout membutuhkan token, yang biasanya ok.
+    // Route::post('/logout', [AuthController::class, 'logout']);
 });
