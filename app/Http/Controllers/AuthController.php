@@ -1,4 +1,3 @@
-// app/Http/Controllers/AuthController.php
 <?php
 
 namespace App\Http\Controllers;
@@ -10,7 +9,24 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        // ... (kode login)
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if (! Auth::attempt($credentials)) {
+            return response()->json(['message' => 'Login gagal: Kredensial tidak cocok'], 401);
+        }
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login berhasil!',
+            'user' => $user,
+            'token' => $token,
+        ]);
     }
 
     public function logout(Request $request)
@@ -20,7 +36,8 @@ class AuthController extends Controller
             $request->user()->currentAccessToken()->delete();
             return response()->json(['message' => 'Logout berhasil!'], 200);
         }
-        // Jika tidak ada user terautentikasi, kembalikan response 401
-        return response()->json(['message' => 'User not authenticated'], 401);
+
+        // Jika tidak ada user terautentikasi (meskipun rute dilindungi middleware)
+        return response()->json(['message' => 'User not authenticated or token invalid'], 401);
     }
 }
