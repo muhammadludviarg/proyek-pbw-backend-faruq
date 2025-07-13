@@ -2,34 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Publikasi;
 use Illuminate\Http\Request;
+use App\Models\Publikasi;
+use Illuminate\Support\Facades\Storage; // Diimpor tapi tidak digunakan dalam kode ini
 use Illuminate\Validation\ValidationException;
 
 class PublikasiController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index() // menampilkan semua data
+    // Method untuk menampilkan semua publikasi
+    public function index()
     {
         $publikasi = Publikasi::all();
-        return response()->json(['data' => $publikasi]);
+        return response()->json($publikasi, 200); // Mengembalikan array publikasi langsung dengan status 200 OK
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($id) // menampilkan satu data saja
-    {
-        $publikasi = Publikasi::findOrFail($id);
-        return response()->json(['data' => $publikasi]);
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) // Menambah data
+    // Method untuk menyimpan publikasi baru
+    public function store(Request $request)
     {
         try {
             $validated = $request->validate([
@@ -38,67 +26,99 @@ class PublikasiController extends Controller
                 'description' => 'nullable|string',
                 'coverUrl' => 'nullable|url',
             ]);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
-        }
 
-        $publikasi = Publikasi::create($validated);
-        return response()->json($publikasi, 201);
+            $publikasi = Publikasi::create($validated);
+            return response()->json($publikasi, 201); // Mengembalikan data publikasi yang baru dibuat dengan status 201 Created
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validasi gagal saat menyimpan publikasi.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            // Tangani error umum lainnya
+            return response()->json([
+                'message' => 'Terjadi kesalahan server saat menyimpan publikasi.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update($id, Request $request) // Mengubah data (untuk PATCH atau PUT)
+    // Method untuk menampilkan detil publikasi
+    public function show(Publikasi $publikasi)
+    {
+        return response()->json($publikasi, 200); // Mengembalikan objek publikasi langsung dengan status 200 OK
+    }
+
+    // Method untuk mengupdate publikasi (digunakan untuk PATCH)
+    public function update(Request $request, Publikasi $publikasi)
     {
         try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'releaseDate' => 'required|date',
-                'description' => 'nullable|string',
+            // 'sometimes' berarti field tidak harus ada, tapi jika ada, harus valid
+            $validatedData = $request->validate([
+                'title' => 'sometimes|required|string|max:255',
+                'releaseDate' => 'sometimes|required|date',
+                'description' => 'sometimes|string|nullable',
                 'coverUrl' => 'nullable|url',
             ]);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
-        }
 
-        $publikasi = Publikasi::findOrFail($id);
-        $publikasi->fill($validated); // Menggunakan fill untuk semua data tervalidasi
-        $publikasi->save();
-        return response()->json(['data' => $publikasi], 200);
+            $publikasi->update($validatedData); // Menggunakan update dengan array data tervalidasi
+
+            return response()->json($publikasi, 200); // Mengembalikan data publikasi yang diperbarui dengan status 200 OK
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Gagal memperbarui data: Validasi gagal.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan server saat memperbarui publikasi.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    // Metode 'change' yang Anda miliki sebelumnya (jika modul menggunakannya secara spesifik)
-    // Jika modul Anda punya instruksi khusus untuk 'change', ini bisa dipakai.
-    // Jika tidak, metode 'update' di atas sudah cukup untuk PATCH/PUT.
+    // Method 'change' yang Anda miliki (digunakan untuk PUT)
+    // Ini dipertahankan terpisah dari 'update' sesuai rute Anda.
     public function change($id, Request $request)
     {
         try {
-            $request->validate([
-                'title'=>'required',
-                'releaseDate'=>'required',
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'releaseDate' => 'required|date',
                 'description' => 'nullable|string',
                 'coverUrl' => 'nullable|url',
             ]);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
-        }
 
-        $publikasi = Publikasi::findOrFail($id);
-        $publikasi->fill($request->only([
-            'title', 'releaseDate', 'description', 'coverUrl'
-        ])); // Hapus ->save() di sini
-        $publikasi->save(); // save() cukup dipanggil sekali
-        return response()->json(['data'=>$publikasi], 200);
+            $publikasi = Publikasi::findOrFail($id);
+            $publikasi->fill($validated);
+            $publikasi->save();
+            return response()->json($publikasi, 200); // Mengembalikan data publikasi langsung dengan status 200 OK
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validasi gagal saat mengubah publikasi.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan server saat mengubah publikasi.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) // Menghapus data
+    // Method untuk menghapus publikasi
+    public function destroy($id)
     {
-        $publikasi = Publikasi::findOrFail($id);
-        $publikasi->delete();
-        return response()->json(['message' => 'Publikasi berhasil dihapus'], 204); // 204 No Content
+        try {
+            $publikasi = Publikasi::findOrFail($id);
+            $publikasi->delete();
+            return response()->json(['message' => 'Publikasi berhasil dihapus'], 204); // 204 No Content dengan pesan
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan server saat menghapus publikasi.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
